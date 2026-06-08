@@ -202,13 +202,18 @@ fi
 # --- archive captures older than the 3 newest (keep refs/ small) ---
 # Append-only timeline: never delete. Move to references/archive/<YYYY>/<MM>/.
 # Runs UNCONDITIONALLY so a previous run's stragglers get cleaned up even
-# when there are no new captures. Uses an array (not a here-string into a
-# while-loop pipe) so a pipefail / SIGPIPE interaction during the first
-# big-batch run doesn't drop entries mid-iteration — that bug ate 4 of 17
-# expected archives on the 2026-06-09 first run.
-mapfile -t TO_ARCHIVE < <(find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort -r | tail -n +4)
+# when there are no new captures.
+#
+# Implementation: write the list of files to archive to a temp file, then
+# read from that file in the while-loop. This avoids a known issue with
+# `find | sort | tail | while read … done <<< "$VAR"` where the
+# here-string-into-while can drop entries under pipefail on big-batch
+# first runs. macOS ships bash 3.2 (no mapfile/readarray), so a temp file
+# is the most portable fix.
+TO_ARCHIVE_LIST=$(mktemp -t jeff-archive.XXXXXX.txt)
+find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort -r | tail -n +4 > "$TO_ARCHIVE_LIST"
 ARCHIVED_COUNT=0
-for OLD in "${TO_ARCHIVE[@]}"; do
+while IFS= read -r OLD; do
   [ -z "$OLD" ] && continue
   BASE=$(basename "$OLD")
   YEAR=$(echo "$BASE" | cut -c1-4)
@@ -221,7 +226,8 @@ for OLD in "${TO_ARCHIVE[@]}"; do
   else
     echo "    ! mv failed: $OLD → $ARC/" >&2
   fi
-done
+done < "$TO_ARCHIVE_LIST"
+rm -f "$TO_ARCHIVE_LIST"
 if [ "$ARCHIVED_COUNT" -gt 0 ]; then
   echo "==> archived $ARCHIVED_COUNT older captures to references/archive/<YYYY>/<MM>/"
   [ "$ARCHIVED_COUNT" -gt 3 ] && echo "    (showing 3; full list in commit/file system)"
