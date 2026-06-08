@@ -78,6 +78,23 @@ This was the inflection point in Jeff's series. Early posts (Apr 20) describe tr
 
 Don't fight the tool's strength.
 
+**Budget refinement (May 4 post)**: the Builder/Operator split implies Claude on the builder side, but Claude Pro $20/mo is "just a teaser" — *"you need to buy $100 Max plan to be able to build stuff."* For budget-constrained operators:
+
+- **Switch to Codex** — "much more generous" than Claude per token, OR
+- **Hermes-alone** — use Hermes as both builder AND operator (gives up the visual/artifact advantages of Claude but keeps the cost line at ~$60/mo DeepSeek-API + $5 Opencode Go first-month)
+
+The Builder/Operator architecture is correct; the SPECIFIC builder is a budget call.
+
+## The May 4 unlock — OpenWebUI
+
+By May 4, Jeff had identified **OpenWebUI** as the chat surface that "transforms the experience of talking with your agent to using a ChatGPT or a Claude." Before this, Hermes output landed in Discord — fine for text-only briefings, but no visuals/HTML/artifacts.
+
+> *"The screenshot is me prompting Hermes to design a visual explainer of OpenWebUI. Hermes designs a HTML and shows it within the same chat."*
+
+This unlocks the Claude-like "artifact" experience without Claude's pricing tier. You can also swap in a raw LLM (no agent harness) through the same OpenWebUI interface for one-off testing.
+
+**Hermes Workspace** is the next-tier surface — features include **Swarm** (multi-agent coordination, "great for developer use cases") + direct editing of Skills/Tasks/Memory/Soul files in one interface. Jeff hadn't mastered it yet as of May 4 ("Since I don't know how to properly use this, I'm not there yet lol") — open watch-item for our own ops.
+
 ## The 60-day Provider Journey
 
 Provider swaps cost 2-3 debugging sessions each. Here's where Jeff landed after 5-6 swaps:
@@ -85,8 +102,9 @@ Provider swaps cost 2-3 debugging sessions each. Here's where Jeff landed after 
 | Provider | Role | Cost | Notes |
 |---|---|---|---|
 | **DeepSeek v4 Flash** | base model (fast, cheap) | direct API discount 75% in May | preferred after optimization |
-| **DeepSeek v4 Pro** | complex tasks | direct API | preferred for synthesis |
-| **Opencode Go** | discovery month | $5/mo first month, >$50 of inference | good for Kimi k2.6, GLM5.1, MiniMax 2.5-2.7 access |
+| **DeepSeek v4 Pro** | complex tasks | direct API; ~$60/mo for Hermes-heavy use = ~$2/day | preferred for synthesis |
+| **Opencode Go** | discovery month + first-time setup | $5/mo first month, >$50 of inference | #1 choice for first-time Hermes setup; good for Kimi k2.6, GLM5.1, MiniMax 2.5-2.7 access |
+| **Claude Pro/Max** | builder side (UI, dashboards) | Pro $20/mo "just a teaser"; Max $100/mo "to actually build" | use sparingly; Codex is "more generous" per token if budget-constrained |
 | **Grok subscription** | x_search tool only | $10/mo (3-month-cancel trick) | xai-oauth config, NOT xai |
 | **Venice AI** | privacy / TEE inference | DIEM credits ($1/day free) | zero data retention |
 | **OpenRouter** | tried, swapped away | — | adds 5-10s latency vs direct |
@@ -142,6 +160,38 @@ Provider swaps cost 2-3 debugging sessions each. Here's where Jeff landed after 
 
 **Cost reality**: before x_search, $0.5/day X API. After (x_search handles content, X API only for bookmark fetch): $0.1/day. Saves $0.4/day = $146/year.
 
+### Pattern 4 — Five daily briefings (May 4 layout)
+
+Jeff's actual end-of-day operator setup as of May 4. Five distinct briefings that each get delivered to Discord:
+
+| Briefing | Source | What it does |
+|---|---|---|
+| **Report on Tech** | tracks `@SemiAnalysis_` + others | tech-side synthesis + portfolio relevance |
+| **Report on Macro** | tracks `@KobeissiLetter` + others | macro signal synthesis |
+| **X Bookmark Briefing** | last 24hr X bookmarks | scored, prioritized, on-demand summaries |
+| **Top 5 Daily Synthesis** | reflects across all other briefings | top 5 insights with "why it matters for ME" rationale |
+| **Polybond Morning Brief** | Polybond dashboard (his Polymarket sharp-tracker) | surfaces insiders / sharp signals / trends |
+
+> *"Daily briefings = my personal fav right now because I don't have to spend time scrolling through X or other sources at all. I just open my Discord and get all the summary from Hermes."*
+
+The key architectural insight here: each briefing has its OWN tracked sources + its OWN synthesis prompt. The "Top 5 Daily Synthesis" is a meta-briefing that consumes the other four — a synthesis-of-syntheses pattern. This is the shape Hermes-as-Operator wants to scale to: many narrow specialists + one cross-cutting daily editor.
+
+### Pattern 5 — Investment-tailored research (May 4)
+
+Beyond briefings, Jeff uses Hermes for active research with persistent context:
+
+> *"I love doing research with Hermes because it remembers my 3 key theses + my preferences + my risk appetite + my current positions (across crypto, equities, prediction markets) and my rationale for those investments. It then uses all these things as context to find the right kinds of investment/research tailored to me. Normal LLM can't compete with that. The moat is in the data/context."*
+
+The memory loop that powers this:
+
+```
+Daily cron jobs → Hindsight ingests insights
+                 → pull patterns & synthesize across any time period
+                 → recall past sessions + draw new relationships
+```
+
+**Diversification context (May 4)**: Jeff was actively moving into equities at this point, needing rapid catch-up. Hermes runs daily price updates + stress-test analyses on tracked stocks, drawing on the same memory context.
+
 ## Skill Bundling Pattern (mandatory at scale)
 
 **Anti-pattern**: one giant 2000+ word prompt per workflow. Bloats context; re-derives from scratch every session.
@@ -168,6 +218,8 @@ Provider swaps cost 2-3 debugging sessions each. Here's where Jeff landed after 
 | Tool | Use | Cost | Notes |
 |---|---|---|---|
 | **Hindsight** | external memory (Recall + Reflect) | — | non-negotiable per his series; Recall for time-sensitive, Reflect for batched |
+| **OpenWebUI** | chat UI surface (replaces Discord-only for visual outputs) | — | enables HTML/visual artifacts inline; Claude-like experience without Claude pricing |
+| **Hermes Workspace** | unified Skills/Tasks/Memory/Soul editor + Swarm | — | Jeff hadn't mastered it as of May 4; watch-item for our ops |
 | **Browser Harness / Browser CDP** | web access | — | Browser CDP beats Playwright on Cloudflare-protected sites |
 | **x_search** (via xai-oauth) | X search | included with Grok sub | timeout 240-300s in config |
 | **Cookie MCP** (by @cookiedotfun) | KOL / sentiment | — | structured leaderboards |
@@ -205,6 +257,8 @@ Provider swaps cost 2-3 debugging sessions each. Here's where Jeff landed after 
 6. **On provider choice** (Jun 1) — *"The best way to go is to pick 1 provider and stick with them. Going direct tend to net you with better discount/connectivity."*
 7. **On skill bundling** (Jun 1) — *"A well-bundled skill costs ~500 tokens to load... but saves 5000+ tokens of re-explaining context in every session. Over 60+ days and hundreds of sessions, the cost saving & the efficiency compounds."*
 8. **On token economy** (Apr 20) — *"It's balancing what I get (which is productivity boost + more learning) to what I pay for (which is inference cost + time/headaches fixing bugs)."*
+9. **On the durable moat** (May 4) — *"Normal LLM can't compete with that. The moat is in the data/context."* Said about Hermes's accumulated knowledge of his theses + portfolio + risk appetite + investment rationale — none of which travels to a fresh LLM session.
+10. **On research substitution** (May 4) — *"Can't remember the last time I do a dedicated non-AI research with Google."* The agent fully displaces the prior search/synthesis workflow once memory + context compound.
 
 ## gbrain Promotion Candidates
 
@@ -213,20 +267,23 @@ For each, the operator can decide whether to promote into `gbrain` as a `type=co
 | Candidate slug (lowercase-kebab) | Type | Why promote | Source posts |
 |---|---|---|---|
 | `agent-90-10-architecture-vs-ai` | concept | The central thesis; affects every other agent we build | Jun 1 |
-| `hermes-operator-not-builder` | concept | The role-split discipline; we should respect it in our own ops | Apr 27, Jun 1 |
+| `hermes-operator-not-builder` | concept | The role-split discipline; we should respect it in our own ops | Apr 27, May 4, Jun 1 |
 | `agent-3-layer-stack-soul-knowledge-tools` | concept | The Identity/Knowledge/Tools framework; applicable to gbrain + Hermes wiring | May 11 |
 | `hermes-skill-bundling-pattern` | concept | Validates our existing skill structure; encode as a hard rule for new skills | May 25, Jun 1 |
 | `agent-feedback-loop-6-steps` | concept | The "permanent rule" encoding discipline; fits gbrain's append-only timeline | Jun 1 |
 | `onchain-forensics-6-stage-pipeline` | concept | Specific pipeline shape we could reuse for our own watch-list | May 25 |
 | `inference-provider-stickiness-rule` | decision | Adopt-or-reject: pick ONE inference provider; needs BRAID-over-SERV rationale | Jun 1 |
 | `x402-pay-per-use-tools-thesis` | concept | The cost-architecture lesson; pairs with our own MCP-server setup | May 25, Jun 1 |
+| `data-context-as-moat` | concept | "The moat is in the data/context" — accumulated theses/portfolio/risk-appetite memory beats fresh-LLM | May 4 |
+| `five-daily-briefings-pattern` | concept | The Tech / Macro / Bookmark / Top-5 / Polybond layout; structurally portable to our own briefings | May 4 |
+| `openwebui-as-claude-artifact-substitute` | concept | OpenWebUI delivers Claude-like inline visuals at zero extra cost; pairs with Hermes-alone builder mode | May 4 |
 
 **Promotion procedure**: per `~/.claude/skills/gbrain/SKILL.md`, read the resolver first, file as `type=concept`, two-layer page format, lowercase kebab slug, T5 citation in the Timeline pointing back to this blueprint + the specific Substack post URL.
 
 ## Known gaps in this blueprint
 
-- **May 4 post** ("Hermes as the Ultimate Analyst — I've found the gist") is partially extracted (referenced in cross-cutting patterns but no dedicated section). The extraction subagent ran out of context mid-stream. Action: read `references/archive/2026/05/2026-05-04-hermes-as-the-ultimate-analyst-i-ve-found-the-gist-for-my-ul.md` separately and append.
-- **Apr 20 post detail** is partial — only quote #8 cites it directly. Full extraction pending.
+- ~~**May 4 post** ("Hermes as the Ultimate Analyst — I've found the gist") is partially extracted~~ **Resolved 2026-06-09**: May 4 content now woven into Role Discovery (budget refinement), a dedicated "May 4 unlock — OpenWebUI" section, Pattern 4 (5 daily briefings) + Pattern 5 (investment-tailored research) under Research Pipelines, Tool Inventory (OpenWebUI + Hermes Workspace + Claude Pro/Max tier), 2 new gold quotes (#9 data/context moat, #10 research substitution), and 3 new gbrain promotion candidates (data-context-as-moat, five-daily-briefings-pattern, openwebui-as-claude-artifact-substitute).
+- **Apr 20 post detail** remains partial — only one quote cites it directly. The Apr 20 post is the "30 skills later" milestone retrospective and would round out the start-of-journey perspective. Backfilled to disk; full structured extraction pending.
 - This blueprint is a SYNTHESIS, not a substitute for reading the captures. Specific claims, costs, prompts should be re-validated against the source post before being treated as canonical.
 
 ## Source captures
