@@ -27,7 +27,7 @@ metadata:
   category: research
   schema_version: '1'
   version: 0.2.0
-  last_refreshed: 2026-06-09
+  last_refreshed: 2026-06-08
   pairs_with: [gbrain, braid-reasoning, serv-reasoning]
   substack_url: https://defi0xjeff.substack.com
   feed_url: https://defi0xjeff.substack.com/feed
