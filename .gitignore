@@ -1,0 +1,7 @@
+# Archived prior states of skills (e.g., standalone repos we absorbed).
+# Kept on disk for inspection but never tracked — would clutter the monorepo
+# with old histories that already exist as standalone .git repos inside.
+.archive/
+
+# macOS metadata
+.DS_Store
