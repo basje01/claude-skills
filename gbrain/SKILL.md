@@ -173,6 +173,32 @@ What this skill captures so you don't have to chase it:
    on a fallback model like xiaomi/mimo) is generative and may invent
    attribution.
 
+## Pairs with — reasoning-lift for decision-class pages
+
+When the page you're authoring is `type=decision`, the **rationale itself**
+benefits from bounded-reasoning generation. Two skills compose here:
+
+- **`~/.claude/skills/braid-reasoning/`** — the trace-graph + revision
+  contract. BRAID is from OpenServ Labs (arXiv:2512.15959), production-proven
+  on Haiku. Use it to wrap any LLM call where you want the rationale
+  externalized and self-critiqued.
+- **`~/.claude/skills/serv-reasoning/`** — the SERV (OpenServ Inference)
+  client. Same lab as BRAID. Tiers `serv-pro` / `serv-standard` are
+  reasoning-bias (~120s wall); BRAID on top of `serv-pro` is the documented
+  way to get a reasoning lift on decision-class prompts today.
+
+**The pattern, in plain prose:** for a high-stakes `type=decision` page,
+generate the **Compiled Truth → Rationale** block through BRAID-over-SERV
+(or BRAID-over-Haiku if SERV is unavailable). The reasoning trace becomes
+the audit trail. Then write the result into gbrain via `put_page` — the
+two-layer page format already has a natural home for both the committed
+decision (Compiled Truth) and the working that led to it (could be a
+section in Compiled Truth, or a Timeline entry citing the BRAID trace).
+
+This integration is documented but **not yet wired in code**. The trigger
+to wire it is the next time we author a high-stakes decision page that
+needs a rationale we'd want to be able to defend in 6 months.
+
 ## Garry-aligned anti-patterns to avoid
 
 Garry has called these out explicitly on X. Avoiding them is a hard rule:
