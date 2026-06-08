@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# refresh.sh — pull @0xJeff's paid Substack via authenticated RSS feed, write
-# new posts to T5 captures under references/<date>-<slug>.md, surface delta vs
-# prior, archive older captures append-only. Does NOT touch SKILL.md. Operator
-# promotes verified claims by hand into gbrain per SKILL.md promotion section.
+# refresh.sh — pull @0xJeff's Substack via the public per-publication RSS
+# feed (full bodies for paid posts included — Substack's default), write
+# new posts to T5 captures under references/<date>-<slug>.md, surface delta
+# vs prior, archive older captures append-only. Does NOT touch SKILL.md.
+# Operator promotes verified claims by hand into gbrain per SKILL.md
+# promotion section.
 #
 # Run weekly via launchd OR manually any time we want to pull fresh thinking.
+# Zero env vars required — publication URL is baked in.
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,35 +15,27 @@ REFS="$SCRIPT_DIR/references"
 SKILL="$SCRIPT_DIR/SKILL.md"
 NOW_UTC="$(date -u +%Y%m%dT%H%M%SZ)"
 
-# --- env-var contract (set in ~/.zshrc and the launchd plist) ---
-if [ -z "${JEFF_SUBSTACK_URL:-}" ] || [ -z "${JEFF_SUBSTACK_RSS_TOKEN:-}" ]; then
-  cat >&2 <<EOF
-FATAL: JEFF_SUBSTACK_URL and JEFF_SUBSTACK_RSS_TOKEN must be set.
-
-  export JEFF_SUBSTACK_URL="https://<publication>.substack.com"
-  export JEFF_SUBSTACK_RSS_TOKEN="<paid-feed-token>"
-
-Find both at: https://substack.com/settings → "RSS feed"
-The URL is in the form https://<publication>.substack.com/feed?token=<long-token>
-Split it: base URL → JEFF_SUBSTACK_URL, token query value → JEFF_SUBSTACK_RSS_TOKEN.
-
-Refusing to fetch the unauthenticated feed (would silently capture free-tier
-previews, not paid content).
-EOF
-  exit 1
-fi
+# --- URL config (defaults to verified publication; override via env if needed) ---
+JEFF_SUBSTACK_URL="${JEFF_SUBSTACK_URL:-https://defi0xjeff.substack.com}"
 
 # Guard against the dormant 0xjeff.substack.com (NOT our Jeff — that's a
-# different "Jeff's Blockchain Insider" from 2022). The correct URL is
-# defi0xjeff.substack.com — verified 2026-06-09.
+# different "Jeff's Blockchain Insider" from 2022). Verified 2026-06-09.
 if echo "$JEFF_SUBSTACK_URL" | grep -qE '^https?://0xjeff\.substack\.com/?$'; then
   echo "FATAL: JEFF_SUBSTACK_URL points at 0xjeff.substack.com — that's a" >&2
   echo "       DIFFERENT (dormant) Jeff. The correct URL for our Jeff is" >&2
-  echo "       https://defi0xjeff.substack.com" >&2
+  echo "       https://defi0xjeff.substack.com (already the default)" >&2
   exit 1
 fi
 
-FEED_URL="${JEFF_SUBSTACK_URL%/}/feed?token=$JEFF_SUBSTACK_RSS_TOKEN"
+# Substack publications expose a public RSS feed at <publication>/feed that
+# delivers FULL post bodies by default (paid included), unless the author
+# has enabled truncation. Verified 2026-06-09 that defi0xjeff.substack.com
+# returns full content for all posts. No subscriber token needed —
+# Substack's per-account RSS setting was deprecated; the per-publication
+# feed is the canonical delivery path. The Python parser (below) checks
+# each item's body for teaser markers and warns if Jeff ever flips
+# truncation on.
+FEED_URL="${JEFF_SUBSTACK_URL%/}/feed"
 LAST_REFRESH=$(awk -F': ' '/last_refreshed:/ {print $2; exit}' "$SKILL" | tr -d '"' | tr -d "'")
 echo "==> SKILL state: last_refreshed=$LAST_REFRESH  feed=$JEFF_SUBSTACK_URL"
 echo ""
@@ -66,7 +61,7 @@ echo "==> fetched $FEED_BYTES bytes from feed"
 # Extract every <item> and emit one tab-separated line:
 # pub_date_iso \t guid \t title \t link \t description_html_b64
 PARSED=$(python3 - "$TMP_FEED" <<'PY'
-import sys, base64
+import sys, base64, re
 try:
     from defusedxml import ElementTree as ET
 except ImportError:
@@ -77,6 +72,15 @@ except ImportError:
     )
     sys.exit(3)
 from email.utils import parsedate_to_datetime
+
+# Phrases that indicate Substack truncated the body (publication enabled
+# paid-only feed) — warn the operator so they know to check.
+TEASER_PATTERNS = (
+    "subscribe to read",
+    "paid subscribers only",
+    "this post is for paid subscribers",
+    "continue reading",
+)
 
 tree = ET.parse(sys.argv[1])
 root = tree.getroot()
@@ -92,6 +96,14 @@ for item in root.iter("item"):
     title = (item.findtext("title") or "").strip().replace("\t", " ")
     link = (item.findtext("link") or "").strip()
     body = item.findtext("content:encoded", default="", namespaces=ns) or item.findtext("description") or ""
+    body_lower = body.lower()
+    is_teaser = any(p in body_lower for p in TEASER_PATTERNS) and len(body) < 2000
+    if is_teaser:
+        sys.stderr.write(
+            f"WARN: '{title}' looks like a teaser ({len(body)} chars) — "
+            "Jeff may have enabled paid-only feed truncation. Body captured "
+            "anyway; operator can paste fuller content if needed.\n"
+        )
     body_b64 = base64.b64encode(body.encode("utf-8")).decode("ascii")
     print(f"{iso}\t{guid}\t{title}\t{link}\t{body_b64}")
 PY

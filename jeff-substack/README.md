@@ -36,29 +36,21 @@ references/
     <YYYY-MM-DD>-<slug>.md              ← older captures (append-only, never deleted)
 ```
 
-## Setup (one-time, operator-only)
+## Setup
 
 ```bash
-# 0. Install defusedxml (required — blocks XXE / billion-laughs against the
-#    RSS parse; the stdlib xml.etree.ElementTree is unsafe by default).
+# One-time: install defusedxml (required — blocks XXE / billion-laughs
+# against the RSS parse; stdlib xml.etree.ElementTree is unsafe by default).
 pip3 install --user defusedxml
 
-# 1. Get your paid Substack RSS URL:
-#    substack.com/settings → "RSS feed" section
-#    Format: https://<publication>.substack.com/feed?token=<token>
-
-# 2. Split URL and token; export to your shell init:
-echo 'export JEFF_SUBSTACK_URL="https://<publication>.substack.com"' >> ~/.zshrc
-echo 'export JEFF_SUBSTACK_RSS_TOKEN="<paid-feed-token>"' >> ~/.zshrc
-source ~/.zshrc
-
-# 3. Test:
+# Run:
 ~/.claude/skills/jeff-substack/refresh.sh
 ```
 
-If either env var is missing, `refresh.sh` exits with an error rather than
-silently fetching the unauthenticated free-tier feed. If `defusedxml` is
-missing, the Python parser exits with a clear install command.
+Zero env vars, zero tokens. The skill fetches the public per-publication
+RSS feed which delivers full bodies for all posts (paid included) — verified
+2026-06-09. If Jeff ever turns on feed truncation, `refresh.sh` warns and
+the SKILL.md "Defensive watch" section documents the pivot paths.
 
 ## How it stays current
 

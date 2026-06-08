@@ -26,12 +26,13 @@ metadata:
     consumer crypto AI, agent economy thesis
   category: research
   schema_version: '1'
-  version: 0.1.1
+  version: 0.2.0
   last_refreshed: 2026-06-09
   pairs_with: [gbrain, braid-reasoning, serv-reasoning]
   substack_url: https://defi0xjeff.substack.com
-  substack_url_env: JEFF_SUBSTACK_URL
-  substack_rss_env: JEFF_SUBSTACK_RSS_TOKEN
+  feed_url: https://defi0xjeff.substack.com/feed
+  feed_auth: none-required
+  feed_verified: 2026-06-09T22:00Z full-body-no-truncation
 ---
 
 # jeff-substack — @0xJeff's paid Substack as a knowledge feed
@@ -73,35 +74,43 @@ He's not a shill. He's a peer-thinker on the same stack we're building. His
 paid Substack is a high-signal feed into our system; the skill is the
 bridge that gets the signal into gbrain without violating T5 discipline.
 
-## Setup (one-time, operator-only)
+## Setup
 
-The paid RSS feed token is sensitive (account-linked — leaking it lets
-anyone read paid content under your subscription). It lives in an env var
-the operator exports once into the shell that runs `refresh.sh`. The
-publication URL is the **verified `defi0xjeff.substack.com`** baked into
-the script; only the token needs operator input.
+**Zero-config — just run the script.** No tokens, no env vars, no auth.
 
 ```bash
-# 1. Get your paid RSS feed token (you must already subscribe):
-#    Log in to substack.com → click your avatar → Settings → scroll to
-#    "RSS feed". The URL Substack shows you looks like:
-#      https://defi0xjeff.substack.com/feed?token=<long-opaque-token>
-#    (For an "all subscriptions" feed it's substack.com/feed?token=<token>;
-#     this skill uses the PER-PUBLICATION feed so paid posts come through
-#     authenticated.)
-
-# 2. Export just the token portion (everything after token=):
-export JEFF_SUBSTACK_URL="https://defi0xjeff.substack.com"
-export JEFF_SUBSTACK_RSS_TOKEN="<long-opaque-token>"
-
-# 3. Persist to your shell init (so launchd can read them too):
-echo 'export JEFF_SUBSTACK_URL="https://defi0xjeff.substack.com"' >> ~/.zshrc
-echo 'export JEFF_SUBSTACK_RSS_TOKEN="<long-opaque-token>"' >> ~/.zshrc
-
-# 4. Verify in a fresh shell, then run the skill:
-source ~/.zshrc
 ~/.claude/skills/jeff-substack/refresh.sh
 ```
+
+### Why no token is needed
+
+Substack publications expose a public RSS feed at
+`<publication>.substack.com/feed` that delivers the **full body** for every
+post — paid posts included — unless the author has explicitly enabled feed
+truncation. Verified 2026-06-09: `defi0xjeff.substack.com/feed` returns
+the full body for paid posts ("The After Hour EP.58", "Why AI Needs to be
+Open and Decentralized", "6 Workflows, 6 Lessons, 60 Days", etc.).
+
+Substack's per-account paid-feed-with-token mechanism was deprecated; the
+per-publication feed is the canonical delivery path.
+
+### Defensive watch — if Jeff ever turns on truncation
+
+`refresh.sh` checks each item's body for teaser markers
+(`"subscribe to read"`, `"paid subscribers only"`, `"continue reading"`)
+combined with a length under 2000 chars. If detected, the script captures
+the teaser anyway and logs a WARN so the operator knows to investigate.
+If this fires across a full refresh, the skill needs to pivot to one of:
+
+1. Email-based capture (Substack still sends the full body via email to
+   paid subscribers — Substack→Proton→Gmail forwarding rule + Gmail MCP)
+2. Playwright-MCP-driven capture of the post URL using the operator's
+   logged-in browser session
+3. Manual paste workflow — operator pastes the body when refresh.sh
+   produces a stub for a teaser-only capture
+
+Until truncation actually fires, the public feed is the simplest, most
+robust path.
 
 > **DON'T commit either value.** `.gitignore` in this skill dir excludes
 > `.env*` and `references/*.local.md` so a stray paste can't leak into git.
