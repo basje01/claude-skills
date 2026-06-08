@@ -1,0 +1,12 @@
+# Paid RSS token must never enter git
+.env*
+
+# Per-operator local overrides (won't be committed even by accident)
+references/*.local.md
+
+# launchd captures stdout/stderr
+.refresh-stdout.log
+.refresh-stderr.log
+
+# macOS metadata
+.DS_Store
