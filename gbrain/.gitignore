@@ -1,0 +1,8 @@
+# launchd captures stdout/stderr; we don't want noisy session logs in git.
+# The substantive output of refresh.sh goes into references/t5-grok-intel-<UTC>.md
+# which IS tracked (append-only timeline).
+.refresh-stdout.log
+.refresh-stderr.log
+
+# macOS metadata
+.DS_Store

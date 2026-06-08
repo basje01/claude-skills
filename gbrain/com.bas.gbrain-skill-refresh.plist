@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.bas.gbrain-skill-refresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/bas/.claude/skills/gbrain/refresh.sh</string>
+    </array>
+
+    <!-- Sunday 17:00 local — quiet but inside normal review window so deltas
+         don't pile up unseen. Pairs with the gbrain-update.timer on hermes-hz
+         that fires Sunday 03:17 UTC. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>17</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- If the Mac was asleep/off at fire time, fire on next wake -->
+    <key>RunAtLoad</key>
+    <false/>
+
+    <!-- 5min jitter so we don't all hit upstream at the same instant -->
+    <key>LowPriorityIO</key>
+    <true/>
+
+    <!-- Logging — captures go into the references/ subdir; this just records
+         that the job fired -->
+    <key>StandardOutPath</key>
+    <string>/Users/bas/.claude/skills/gbrain/.refresh-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bas/.claude/skills/gbrain/.refresh-stderr.log</string>
+
+    <!-- PATH for the subprocess — needs gh + grok -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/Users/bas/.grok/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
