@@ -30,12 +30,14 @@ EOF
   exit 1
 fi
 
-# Verify the URL doesn't look like the dormant 0xjeff.substack.com (which is
-# a different Jeff's 2022 blog, see SKILL.md open questions).
+# Guard against the dormant 0xjeff.substack.com (NOT our Jeff — that's a
+# different "Jeff's Blockchain Insider" from 2022). The correct URL is
+# defi0xjeff.substack.com — verified 2026-06-09.
 if echo "$JEFF_SUBSTACK_URL" | grep -qE '^https?://0xjeff\.substack\.com/?$'; then
-  echo "WARN: JEFF_SUBSTACK_URL points at 0xjeff.substack.com which is dormant" >&2
-  echo "      since 2022 ('Jeff's Blockchain Insider'). Confirm this is the" >&2
-  echo "      currently active paid publication before proceeding." >&2
+  echo "FATAL: JEFF_SUBSTACK_URL points at 0xjeff.substack.com — that's a" >&2
+  echo "       DIFFERENT (dormant) Jeff. The correct URL for our Jeff is" >&2
+  echo "       https://defi0xjeff.substack.com" >&2
+  exit 1
 fi
 
 FEED_URL="${JEFF_SUBSTACK_URL%/}/feed?token=$JEFF_SUBSTACK_RSS_TOKEN"

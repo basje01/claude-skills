@@ -26,9 +26,10 @@ metadata:
     consumer crypto AI, agent economy thesis
   category: research
   schema_version: '1'
-  version: 0.1.0
-  last_refreshed: 2026-06-08
+  version: 0.1.1
+  last_refreshed: 2026-06-09
   pairs_with: [gbrain, braid-reasoning, serv-reasoning]
+  substack_url: https://defi0xjeff.substack.com
   substack_url_env: JEFF_SUBSTACK_URL
   substack_rss_env: JEFF_SUBSTACK_RSS_TOKEN
 ---
@@ -45,7 +46,19 @@ metadata:
 the AI-agent stack — both the infrastructure (memory layers, wiki layers,
 Hindsight/recall systems) and the market (which agent projects matter,
 which narratives are forming, where VC signal is broken). His paid Substack
-is the long-form home for the analysis his X threads only summarize.
+([defi0xjeff.substack.com](https://defi0xjeff.substack.com)) is the
+long-form home for the analysis his X threads only summarize.
+
+His Substack bio: *"I write Web3 AI content daily -> Filtered Thoughts on
+X and Unfiltered 'Here'"*. 4.2K+ subscribers, #12 Rising in Crypto on
+Substack's leaderboard. He posts ~weekly+ — recent titles confirm he writes
+DIRECTLY about our stack:
+
+- "Hermes as a Onchain Analyst" (May 25 2026)
+- "All Roads Lead to Decentralized AI" (May 27 2026)
+- "6 Workflows, 6 Lessons, 60 Days" (Jun 1 2026)
+- "Why AI Needs to be Open and Decentralized" (Jun 3 2026)
+- "The After Hour EP.58 — Blood on the Street" (Jun 7 2026)
 
 Our paperclip intel archives caught him discussing:
 
@@ -62,23 +75,32 @@ bridge that gets the signal into gbrain without violating T5 discipline.
 
 ## Setup (one-time, operator-only)
 
-The paid Substack URL and RSS feed token are sensitive (RSS token is
-account-linked — leaking it lets anyone read paid content under your sub).
-They live in env vars the operator exports once into the shell that runs
-`refresh.sh`:
+The paid RSS feed token is sensitive (account-linked — leaking it lets
+anyone read paid content under your subscription). It lives in an env var
+the operator exports once into the shell that runs `refresh.sh`. The
+publication URL is the **verified `defi0xjeff.substack.com`** baked into
+the script; only the token needs operator input.
 
 ```bash
-# Find your paid RSS feed URL:
-# 1. Log in to substack.com → Settings → "RSS feed" section
-# 2. The URL looks like: https://<publication>.substack.com/feed?token=<long-token>
-# 3. Export the BASE url + the token separately:
+# 1. Get your paid RSS feed token (you must already subscribe):
+#    Log in to substack.com → click your avatar → Settings → scroll to
+#    "RSS feed". The URL Substack shows you looks like:
+#      https://defi0xjeff.substack.com/feed?token=<long-opaque-token>
+#    (For an "all subscriptions" feed it's substack.com/feed?token=<token>;
+#     this skill uses the PER-PUBLICATION feed so paid posts come through
+#     authenticated.)
 
-export JEFF_SUBSTACK_URL="https://<publication>.substack.com"
-export JEFF_SUBSTACK_RSS_TOKEN="<paid-feed-token>"
+# 2. Export just the token portion (everything after token=):
+export JEFF_SUBSTACK_URL="https://defi0xjeff.substack.com"
+export JEFF_SUBSTACK_RSS_TOKEN="<long-opaque-token>"
 
-# Persist to your shell init (so launchd can read them too):
-echo 'export JEFF_SUBSTACK_URL="..."' >> ~/.zshrc
-echo 'export JEFF_SUBSTACK_RSS_TOKEN="..."' >> ~/.zshrc
+# 3. Persist to your shell init (so launchd can read them too):
+echo 'export JEFF_SUBSTACK_URL="https://defi0xjeff.substack.com"' >> ~/.zshrc
+echo 'export JEFF_SUBSTACK_RSS_TOKEN="<long-opaque-token>"' >> ~/.zshrc
+
+# 4. Verify in a fresh shell, then run the skill:
+source ~/.zshrc
+~/.claude/skills/jeff-substack/refresh.sh
 ```
 
 > **DON'T commit either value.** `.gitignore` in this skill dir excludes
@@ -184,16 +206,22 @@ lab as BRAID, OpenServ Labs). `serv-pro` tier for the reasoning loop;
 
 ## Open questions to track
 
-- [ ] **What's the actual paid Substack URL?** As of last_refreshed,
-      `0xjeff.substack.com` resolves to "Jeff's Blockchain Insider" — a
-      dormant publication from 2022, likely an earlier or different
-      newsletter. The currently active paid Substack URL needs to be
-      pasted into `JEFF_SUBSTACK_URL` once the operator identifies it
-      (via his current X bio, a recent pinned tweet, or direct ask).
-- [ ] **Does the digest land in gmail too?** If yes, we could parse from
-      inbox as a redundant capture path (no token rotation needed).
-- [ ] **How often does Jeff post?** Determines refresh cadence. If
-      multi-weekly, switch from weekly to twice-weekly launchd.
+- [x] ~~What's the actual paid Substack URL?~~ Verified 2026-06-09:
+      `defi0xjeff.substack.com` (NOT `0xjeff.substack.com` — that's a
+      dormant 2022 publication by a different Jeff). The skill's
+      `JEFF_SUBSTACK_URL` env var is set to the verified value.
+- [ ] **How often does Jeff post?** Recent cadence looks weekly-ish (4
+      posts May 25 – Jun 7), so the weekly launchd plist is a good fit.
+      Re-evaluate after 4 captures: if posts are landing twice per
+      `refresh.sh` run, switch cadence to twice-weekly.
+- [ ] **Wire the launchd plist** (`com.bas.jeff-substack-refresh.plist`)
+      and the installer, modeled on `gbrain/install-refresh-launchd.sh`.
+      Suggested: Sunday 18:00 local (gbrain runs at 17:00, so Jeff
+      captures 1h after — minimal contention, same window in operator's
+      mind).
+- [ ] **Does the digest land in gmail too?** If yes, we have a redundant
+      capture path that doesn't depend on the RSS token (parse from inbox).
+      Worth probing if the RSS-token rotation ever bites us.
 - [ ] **Cross-source confirmation pattern.** When Jeff proposes a thesis,
       does grok-p X-search of @0xJeff + the same topic surface independent
       voices? If so, document the confirmation query in this skill.

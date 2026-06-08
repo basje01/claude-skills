@@ -120,9 +120,10 @@ ls ~/.claude/skills/jeff-substack/references/archive/
 
 ## Open follow-ups
 
-- [ ] Confirm the active paid Substack URL (Jeff's `0xjeff.substack.com`
-      is a dormant 2022 blog — the active one is elsewhere)
-- [ ] Write `com.bas.jeff-substack-refresh.plist` + `install-refresh-launchd.sh`
-      once the paid URL is confirmed and we know the post cadence
+- [x] ~~Confirm the active paid Substack URL~~ Verified 2026-06-09:
+      `defi0xjeff.substack.com` (NOT `0xjeff.substack.com`, which is a
+      dormant 2022 publication by a different Jeff)
+- [ ] Write `com.bas.jeff-substack-refresh.plist` + `install-refresh-launchd.sh`.
+      Suggested cadence: Sunday 18:00 local (1h after gbrain refresh)
 - [ ] Consider gmail-inbox parsing as a redundant capture path (no token
       rotation needed; uses the Substack email delivery as the feed)
