@@ -185,40 +185,46 @@ done <<< "$PARSED"
 echo ""
 echo "==> $NEW_COUNT new captures written; $((POST_COUNT - NEW_COUNT)) already captured (skipped)"
 
-if [ "$NEW_COUNT" -eq 0 ]; then
-  echo "==> nothing new; SKILL.md last_refreshed left unchanged"
-  exit 0
-fi
-
-# --- diff vs prior capture (newest in refs/, EXCLUDING the just-written ones) ---
-# Strictly informational; archives happen below.
-PRIOR=$(find "$REFS" -maxdepth 1 -name '*.md' -not -newer "$REFS" 2>/dev/null \
-  | sort | tail -1)
-if [ -n "$PRIOR" ] && [ -f "$PRIOR" ]; then
-  NEWEST=$(find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort | tail -1)
-  if [ "$PRIOR" != "$NEWEST" ]; then
-    echo ""
-    echo "==> delta vs previous capture: $PRIOR → $NEWEST"
-    diff -u "$PRIOR" "$NEWEST" 2>/dev/null | head -60 || true
+# --- diff vs prior capture (only when there's something new to diff) ---
+if [ "$NEW_COUNT" -gt 0 ]; then
+  PRIOR=$(find "$REFS" -maxdepth 1 -name '*.md' -not -newer "$REFS" 2>/dev/null \
+    | sort | tail -1)
+  if [ -n "$PRIOR" ] && [ -f "$PRIOR" ]; then
+    NEWEST=$(find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort | tail -1)
+    if [ "$PRIOR" != "$NEWEST" ]; then
+      echo ""
+      echo "==> delta vs previous capture: $PRIOR → $NEWEST"
+      diff -u "$PRIOR" "$NEWEST" 2>/dev/null | head -60 || true
+    fi
   fi
 fi
 
 # --- archive captures older than the 3 newest (keep refs/ small) ---
 # Append-only timeline: never delete. Move to references/archive/<YYYY>/<MM>/.
-TO_ARCHIVE=$(find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort -r | tail -n +4)
-if [ -n "$TO_ARCHIVE" ]; then
-  echo ""
-  echo "==> archiving captures older than the 3 newest"
-  while IFS= read -r OLD; do
-    [ -z "$OLD" ] && continue
-    BASE=$(basename "$OLD")
-    YEAR=$(echo "$BASE" | cut -c1-4)
-    MONTH=$(echo "$BASE" | cut -c6-7)
-    ARC="$REFS/archive/$YEAR/$MONTH"
-    mkdir -p "$ARC"
-    mv "$OLD" "$ARC/"
-    echo "    → $ARC/$BASE"
-  done <<< "$TO_ARCHIVE"
+# Runs UNCONDITIONALLY so a previous run's stragglers get cleaned up even
+# when there are no new captures. Uses an array (not a here-string into a
+# while-loop pipe) so a pipefail / SIGPIPE interaction during the first
+# big-batch run doesn't drop entries mid-iteration — that bug ate 4 of 17
+# expected archives on the 2026-06-09 first run.
+mapfile -t TO_ARCHIVE < <(find "$REFS" -maxdepth 1 -name '*.md' 2>/dev/null | sort -r | tail -n +4)
+ARCHIVED_COUNT=0
+for OLD in "${TO_ARCHIVE[@]}"; do
+  [ -z "$OLD" ] && continue
+  BASE=$(basename "$OLD")
+  YEAR=$(echo "$BASE" | cut -c1-4)
+  MONTH=$(echo "$BASE" | cut -c6-7)
+  ARC="$REFS/archive/$YEAR/$MONTH"
+  mkdir -p "$ARC"
+  if mv "$OLD" "$ARC/"; then
+    ARCHIVED_COUNT=$((ARCHIVED_COUNT + 1))
+    [ "$ARCHIVED_COUNT" -le 3 ] && echo "    → $ARC/$BASE" || true
+  else
+    echo "    ! mv failed: $OLD → $ARC/" >&2
+  fi
+done
+if [ "$ARCHIVED_COUNT" -gt 0 ]; then
+  echo "==> archived $ARCHIVED_COUNT older captures to references/archive/<YYYY>/<MM>/"
+  [ "$ARCHIVED_COUNT" -gt 3 ] && echo "    (showing 3; full list in commit/file system)"
 fi
 
 # --- T1 auto-promotion: bump last_refreshed in SKILL.md frontmatter ---
