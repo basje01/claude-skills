@@ -181,10 +181,22 @@ We have a full Bittensor subnet tracker at `/Users/bas/Code/icm-analytics-websit
 | SN87 | Luminar Network | 3.02% | 1.0 |
 | SN78 | Vocence | 2.98% | 1.0 |
 
-**Two takeaways:**
+**Three takeaways:**
 
 1. **Subnet emission share is highly volatile.** Jeff's Mar 19 2026 snapshot (Templar at 6.86%) does not match Jun 9 2026 (no Templar, top at 5.15%). Treat any "% emission" claim about Bittensor as a SNAPSHOT, not a fact. The right verification path is: query current state via [[bittensor-subnet-emission-volatility]] or our own bittensor/data/subnets/<N>.json.
 2. **Our pipeline has an enrichment gap** — 3 of top 15 subnets show "Unknown" as name. Worth checking [`scripts/sync_subnet_handles_from_db.py`](file:///Users/bas/Code/icm-analytics-website/scripts/sync_subnet_handles_from_db.py) to ensure it's running against icm_unified (.121).
+3. **STRUCTURAL FINDING (T1-corroborated via Taostats 2026-06-09): emission share is DECOUPLED from market valuation.** Operator confirmed (not a pipeline bug): Chutes' position at near-zero emission is real. Taostats shows multiple high-FDV subnets sitting at ~0 emission:
+   - Chutes (SN64): $295M FDV, ~0% emission
+   - Affine (SN120): $254M FDV, ~0% emission
+   - Targon (SN4): $235M FDV, ~0% emission
+   - lium.io (SN51): $212M FDV, ~0% emission
+   - Score (SN44): $175M FDV, ~0% emission
+
+   Meanwhile high-emission subnets (SN92 at 5.15%, SN116 at 3.71%, etc.) carry far lower market valuations.
+
+   **The Darwinian reward mechanism (validator delegation → emission) is NOT tracking what the market values.** This refutes a load-bearing implicit assumption in the "Darwinian filter rewards winners" framing — it rewards what validators delegate to, which isn't always what the market values. Filed as a separate gbrain concept: [[bittensor-emission-vs-marketcap-decoupling]].
+
+   **Practical implication for evaluating Bittensor subnets**: filter on MC/FDV + external usage signals (OpenRouter for inference, github cadence, revenue disclosures) FIRST. Use emission as secondary signal at best. There are TWO investable categories in Bittensor — real-product subnets (filter on MC/FDV) and validator-game subnets (filter on emission durability); don't conflate them.
 
 **Implications for the Bittensor evaluation framework:**
 - The 5-dimension comparison vs Virtuals + the Darwinian death-penalty mechanism + the post-halving emission math are STRUCTURAL claims that don't depend on a snapshot — those remain durable per our T1 read.
