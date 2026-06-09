@@ -158,11 +158,45 @@ This is where projects like **Warden Protocol** (SPEX statistical proofs, mentio
 - `chutes-vs-together-ai-pricing-50pct-cheaper` — verify against Chutes' published API pricing + Together AI's published API pricing
 - `bittensor-871-tao-subnet-slot-cost` — verify against current Bittensor subnet auction state
 
+## T1 verification update (2026-06-09) — against our own SQLite/JSON data
+
+We have a full Bittensor subnet tracker at `/Users/bas/Code/icm-analytics-website/bittensor/data/subnets/<NETUID>.json` — 129 per-subnet JSON files with current emission share, miner/validator counts, alphaStaked, ATH USD, 24h/7d/30d changes. Verified the blueprint's data-heavy claims against current state:
+
+| Jeff claim (Mar 2026) | T1 current state (Jun 9 2026) | Verdict |
+|---|---|---|
+| 128 subnets | **129 subnets** in our tracker | ✓ VERIFIED (one added since) |
+| Templar = SN3 with 6.86% emission | SN3 = "deprecated" / "deprecated" / 0.095% emission / 5 active miners / 1 active validator. NO Templar found in subnet roster. NO subnet at 6.86% — top emission is **SN92 at 5.15%** | ✗ **REFUTED** — either Templar moved, was renamed, was deprecated, or never existed at that slot. The 6.86% figure doesn't match any subnet. |
+| Chutes = SN64 | SN64 = **Chutes** ✓ "Breakthrough Serverless Compute for AI, At Scale" — github.com/chutesai/chutes — 14 miners + 11 validators. **But emission is 0.029%**, not in the top 15. | ⚠ VERIFIED with major nuance — Chutes is real on SN64, but it's NOT currently a top-emission subnet (vastly less dominant than Jeff's "leading inference provider" framing implied) |
+
+**Current top emission share (Jun 9 2026, our SQLite/JSON snapshot):**
+
+| Netuid | Name | Emission % | tao/day |
+|---|---|---|---|
+| SN92 | Unknown (enrichment gap in our pipeline) | 5.15% | 1.0 |
+| SN116 | Unknown | 3.71% | 1.0 |
+| SN76 | Byzantium | 3.61% | 1.0 |
+| SN82 | Compelle | 3.21% | 1.0 |
+| SN70 | NexisGen | 3.19% | 1.0 |
+| SN36 | Eirel | 3.02% | 1.0 |
+| SN87 | Luminar Network | 3.02% | 1.0 |
+| SN78 | Vocence | 2.98% | 1.0 |
+
+**Two takeaways:**
+
+1. **Subnet emission share is highly volatile.** Jeff's Mar 19 2026 snapshot (Templar at 6.86%) does not match Jun 9 2026 (no Templar, top at 5.15%). Treat any "% emission" claim about Bittensor as a SNAPSHOT, not a fact. The right verification path is: query current state via [[bittensor-subnet-emission-volatility]] or our own bittensor/data/subnets/<N>.json.
+2. **Our pipeline has an enrichment gap** — 3 of top 15 subnets show "Unknown" as name. Worth checking [`scripts/sync_subnet_handles_from_db.py`](file:///Users/bas/Code/icm-analytics-website/scripts/sync_subnet_handles_from_db.py) to ensure it's running against icm_unified (.121).
+
+**Implications for the Bittensor evaluation framework:**
+- The 5-dimension comparison vs Virtuals + the Darwinian death-penalty mechanism + the post-halving emission math are STRUCTURAL claims that don't depend on a snapshot — those remain durable per our T1 read.
+- The specific subnet picks (Templar / Chutes as winners) are SNAPSHOT claims that need re-verification against current state before being treated as actionable.
+- **For any future TAO allocation decision**: query our bittensor.db / per-subnet JSON first, sort by current emission share + activity, THEN apply Jeff's framework to interpret.
+
 ## Known gaps in this blueprint
 
 - The Mar 19 2026 Handbook has premium-subscriber content (paywalled subnet recommendations) — full roster of "popular subnets past / now / future" not captured. If you want the specific subnet picks Jeff backs, the handbook is the source post to read.
 - Privacy mechanism analysis is comparable to the DeAI blueprint — Jeff doesn't name ZK / FHE / TEE explicitly. The architectural-vs-cryptographic privacy distinction (this blueprint's privacy section) extends the [[deai-privacy-mechanism-gap]] framework to Bittensor specifically.
 - The "Bittensor is Back" framing (Mar 15 2026) implies prior dormancy. Worth tracking whether the rally that triggered that post is sustaining or fading.
+- **Templar resolution gap**: was Templar a different netuid at some point, or did Jeff get the SN# wrong? Worth grep'ing Substack archives for "Templar" mentions across other posts to pin down what subnet number it actually maps to.
 
 ## Source captures
 
