@@ -198,6 +198,14 @@ We have a full Bittensor subnet tracker at `/Users/bas/Code/icm-analytics-websit
 
    **Practical implication for evaluating Bittensor subnets**: filter on MC/FDV + external usage signals (OpenRouter for inference, github cadence, revenue disclosures) FIRST. Use emission as secondary signal at best. There are TWO investable categories in Bittensor — real-product subnets (filter on MC/FDV) and validator-game subnets (filter on emission durability); don't conflate them.
 
+### Protocol research closes the loop (2026-06-09 follow-up)
+
+Filed as gbrain page `bittensor-dtao-protocol-mechanics` — T1-verified via opentensor/subtensor GitHub releases + docs.learnbittensor.org. Key findings:
+- **dTAO activated in Feb 2025** (subtensor v2.0.4), not Q4 2025 as initially guessed
+- **Q4 2025 brought additional changes**: Child Key Fee (Sept 2025, 1→18% over 17 days), v3.2.8-320 release (Sept 25 — SubnetLimit=128, ImmunityPeriod 6→4 months, Multiple Mechanisms Within Subnets with `emissions-split` btcli), Root Claim (Oct), TAO halving (Dec 19 2025 via v3.3.2-365)
+- **Under dTAO, emission share = alpha-TAO LP depth**, NOT market cap. A subnet can have high FDV (holders accumulating off-LP) AND low emission share (thin LP). This EXPLAINS the high-FDV / low-emission pattern in the Chutes/Affine/Targon group — it's not validators misbehaving; it's the protocol working as designed.
+- **Jeff's specific numerical claims need re-anchoring**: 871 TAO subnet slot ≠ Sept 25 release's "2,000 TAO on day 7" (auction-dynamic; both can be true at different times). 128 subnet limit ✓ verified. Halving Dec 2025 ✓ verified. Templar SN3 at 6.86% still REFUTED.
+
 **Implications for the Bittensor evaluation framework:**
 - The 5-dimension comparison vs Virtuals + the Darwinian death-penalty mechanism + the post-halving emission math are STRUCTURAL claims that don't depend on a snapshot — those remain durable per our T1 read.
 - The specific subnet picks (Templar / Chutes as winners) are SNAPSHOT claims that need re-verification against current state before being treated as actionable.
