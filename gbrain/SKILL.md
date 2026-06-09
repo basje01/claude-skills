@@ -225,23 +225,85 @@ From [@garrytan May 17 2026](https://x.com/garrytan/status/2056119107133870149):
 > and re-ranking option over OpenAI and Voyage AI. ... For personal AI
 > scenarios against my 120k markdown brain ZeroEntropy has earned the top slot."*
 
-Setup (after `dashboard.zeroentropy.dev` signup for the key):
+Setup (after `dashboard.zeroentropy.dev` signup for the key). The
+documented `retrieval-upgrade --reindex` command no longer exists as of
+v0.42 — the actual procedure for an EXISTING brain that was init'd in
+`--no-embedding` mode is the export → wipe → re-init → import → embed
+flow. Verified end-to-end 2026-06-09 against our hermes-hz install.
+
+**Dimensions: `zembed-1` is 2560d, not 1024d.** The earlier 1024 value in
+prior versions of this skill was wrong — confirmed via gbrain's init
+output: `Embedding: zeroentropyai:zembed-1 (2560d)`.
 
 ```bash
-ssh -t hermes-wg '
-sudo tee -a /etc/gbrain/gbrain.env > /dev/null <<EOF
-ZEROENTROPY_API_KEY=ze_...
-GBRAIN_EMBEDDING_MODEL=zeroentropyai:zembed-1
-GBRAIN_EMBEDDING_DIMENSIONS=1024
+# 1. Add env vars (loaded by the gbrain systemd service unit)
+ssh hermes-wg 'printf "%s\n" \
+  "ZEROENTROPY_API_KEY=ze_YOUR_KEY_HERE" \
+  "GBRAIN_EMBEDDING_MODEL=zeroentropyai:zembed-1" \
+  "GBRAIN_EMBEDDING_DIMENSIONS=2560" \
+  | sudo tee -a /etc/gbrain/gbrain.env > /dev/null'
+
+# 2. Export current pages to disk (safety — recoverable if anything fails)
+ssh hermes-wg 'sudo systemctl stop gbrain && sleep 2 && \
+  sudo -u gbrain HOME=/var/lib/gbrain bash -c \
+    "cd /opt/gbrain/app && /opt/bun/bin/bun run src/cli.ts export --dir /tmp/brain-export-$(date +%Y-%m-%d)"'
+
+# 3. Fix /var/lib/gbrain/.gbrain/config.json — flip embedding_disabled to
+#    false and add embedding_model + embedding_dimensions. The init flag
+#    --embedding-model does NOT clear this on existing brains; you must
+#    edit the JSON.
+ssh hermes-wg 'sudo cp /var/lib/gbrain/.gbrain/config.json /var/lib/gbrain/.gbrain/config.json.bak-pre-ze && \
+  sudo tee /var/lib/gbrain/.gbrain/config.json > /dev/null <<EOF
+{
+    "engine": "pglite",
+    "database_path": "/var/lib/gbrain/.gbrain/brain.pglite",
+    "embedding_disabled": false,
+    "embedding_model": "zeroentropyai:zembed-1",
+    "embedding_dimensions": 2560,
+    "schema_pack": "gbrain-base-v2",
+    "mcp": { "publish_skills": true },
+    "self_upgrade": { "mode": "notify", "mode_prompted": true }
+}
 EOF
-sudo systemctl restart gbrain
-sleep 5
-sudo -u gbrain HOME=/var/lib/gbrain bash -c "cd /opt/gbrain/app && /opt/bun/bin/bun run src/cli.ts retrieval-upgrade --to zeroentropyai:zembed-1 --reindex"
-'
+sudo chown gbrain:gbrain /var/lib/gbrain/.gbrain/config.json && \
+sudo chmod 600 /var/lib/gbrain/.gbrain/config.json'
+
+# 4. Wipe brain.pglite (so init re-creates schema with correct vector
+#    column size), then init + import + embed AS gbrain user with env vars
+#    explicitly preserved (sudo strips them otherwise).
+ssh hermes-wg 'sudo rm -rf /var/lib/gbrain/.gbrain/brain.pglite && \
+  sudo -u gbrain ZEROENTROPY_API_KEY=ze_YOUR_KEY_HERE \
+    GBRAIN_EMBEDDING_MODEL=zeroentropyai:zembed-1 \
+    GBRAIN_EMBEDDING_DIMENSIONS=2560 \
+    HOME=/var/lib/gbrain bash -c "
+    cd /opt/gbrain/app
+    BUN=/opt/bun/bin/bun
+    \$BUN run src/cli.ts init --pglite --embedding-model zeroentropyai:zembed-1
+    \$BUN run src/cli.ts import /tmp/brain-export-$(date +%Y-%m-%d)/
+    \$BUN run src/cli.ts embed --all
+    \$BUN run src/cli.ts stats
+  "'
+
+# 5. Restart gbrain service
+ssh hermes-wg 'sudo systemctl start gbrain && sleep 3 && systemctl is-active gbrain'
 ```
 
+**Verification**: stats should show `Embedded: N` matching `Chunks: N`.
+Then test semantic search via the CLI (bypasses Hermes session layer):
+
+```bash
+ssh hermes-wg 'sudo -u gbrain HOME=/var/lib/gbrain bash -c \
+  "cd /opt/gbrain/app && /opt/bun/bin/bun run src/cli.ts query \"<abstract query>\""'
+```
+
+Good hit returns a `[0.9+] slug` line — semantic similarity above 0.9
+means it's working. If "No results," the corpus may just be small enough
+that the threshold-not-met filter kicks in; try a more concrete query.
+
 Zero-cost fallback: `ollama:qwen3-embedding:4b` (MTEB 69.45, ~2.5GB disk +
-~3-4GB RAM). Same `retrieval-upgrade` flow.
+~3-4GB RAM). Same flow, swap `embedding_model` to `ollama:qwen3-embedding`
+and adjust `embedding_dimensions` to match the model (qwen3-embedding 4b
+is 1024d). Requires `ollama` installed + the model pulled.
 
 ## Auto-update (Garry ships ~daily)
 
